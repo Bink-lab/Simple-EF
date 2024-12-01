@@ -1,8 +1,8 @@
 import os
 import shutil
-import psutil
-import time
+from pathlib import Path
 import keyboard
+import time
 
 print(""" $$$$$$\  $$\                         $$\           
 $$  __$$\ \__|                        $$ |          
@@ -16,44 +16,56 @@ $$\   $$ |$$ |$$ | $$ | $$ |$$ |  $$ |$$ |$$   ____|
                             $$ |                    
                             \__|                    \n\n""")
 
-def kill_process(process_name):
-    for proc in psutil.process_iter(['name']):
-        try:
-            if proc.info['name'] and process_name.lower() in proc.info['name'].lower():
-                proc.kill()
-                print(f"[+] Terminated process: {proc.info['name']}")
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            pass
-
-def delete_folder(folder_path):
-    if os.path.exists(folder_path):
-        try:
-            shutil.rmtree(folder_path)
-            print(f"[+] Deleted folder: {folder_path}")
-        except Exception as e:
-            print(f"[!] Error deleting folder: {e}")
-    else:
-        print(f"[!] Folder not found: {folder_path}")
+def clean_roblox_data():
+    try:
+        local_app_data = os.getenv('LOCALAPPDATA')
+        if not local_app_data:
+            print("[E] LocalAppData directory not found")
+            return False
+        roblox_path = Path(local_app_data) / "Roblox"
+        if not roblox_path.exists():
+            print("[E] Roblox folder not found")
+            return False
+            
+        # Handle logs folder
+        logs_path = roblox_path / "logs"
+        if logs_path.exists():
+            try:
+                shutil.rmtree(logs_path)
+                print("[S] Successfully deleted logs folder")
+            except Exception as e:
+                print(f"[E] Error deleting logs folder: {e}")
+                return False
+                
+        # Handle RobloxCookies.dat
+        localStorage_path = roblox_path / "LocalStorage"
+        cookies_file = localStorage_path / "RobloxCookies.dat"
+        
+        if cookies_file.exists():
+            try:
+                os.remove(cookies_file)
+                print("[!] Successfully deleted RobloxCookies.dat")
+            except Exception as e:
+                print(f"[E] Error deleting RobloxCookies.dat: {e}")
+                return False
+                
+        return True
+        
+    except Exception as e:
+        print(f"[E]    An error occurred: {e}")
+        return False
 
 if __name__ == "__main__":
-    # Terminate processes
-    kill_process("Bloxstrap")
-    kill_process("RobloxPlayerBeta.exe")
+    success = clean_roblox_data()
+    if success:
+        print("[S] All cleanup operations completed successfully")
+    else:
+        print("[E] Some cleanup operations failed")
+    
+    print("\n[!] Press ESC to exit...")
+    while True:
+        if keyboard.is_pressed('esc'):
+            break
+        time.sleep(0.1)  # Reduce CPU usage cuz ye
 
-    # Give the system a moment to terminate the processes
-    time.sleep(3)
-
-    # Path to the Roblox folder in LOCALAPPDATA
-    local_app_data = os.getenv('LOCALAPPDATA')
-    roblox_folder = os.path.join(local_app_data, 'Roblox')
-
-    # Specify subfolders to delete
-    local_storage_folder = os.path.join(roblox_folder, 'LocalStorage')
-    logs_folder = os.path.join(roblox_folder, 'Logs')
-
-    # Delete the subfolders
-    delete_folder(local_storage_folder)
-    delete_folder(logs_folder)
-
-print("\nPress esc to exit...")
-keyboard.wait("Esc")
+# Yippie!!! roblox auth go boom boom
